@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="dataSourceStorageLocal">
-    <data-source name="postgres@localhost" uuid="e93b8adf-f1e6-4d5e-9f3c-dee260a256d4">
+    <data-source name="postgres@localhost" uuid="162bd19e-502a-48c9-a7ea-63677d4ded5a">
       <database-info product="PostgreSQL" version="9.6.16" jdbc-version="4.2" driver-name="PostgreSQL JDBC Driver" driver-version="42.2.5" dbms="POSTGRES" exact-version="9.6.16" exact-driver-version="42.2">
         <identifier-quote-string>&quot;</identifier-quote-string>
       </database-info>
@@ -16,11 +16,12 @@
         </introspection-scope>
       </schema-mapping>
     </data-source>
-    <data-source name="hibernate.cfg.xml/Hibernate" uuid="d638dd94-f139-460c-841b-3b79e0fcace3">
+    <data-source name="hibernate.cfg.xml/Hibernate" uuid="47def547-7beb-43ab-9103-8b9905b582a9">
       <database-info product="PostgreSQL" version="9.6.16" jdbc-version="4.2" driver-name="PostgreSQL JDBC Driver" driver-version="42.2.5" dbms="POSTGRES" exact-version="9.6.16" exact-driver-version="42.2">
         <identifier-quote-string>&quot;</identifier-quote-string>
       </database-info>
       <case-sensitivity plain-identifiers="lower" quoted-identifiers="exact" />
+      <secret-storage>master_key</secret-storage>
       <user-name>postgres</user-name>
       <schema-mapping>
         <introspection-scope>

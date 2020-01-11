@@ -1,5 +1,6 @@
 package telegramBot;
 
+import lombok.SneakyThrows;
 import models.Race;
 import models.User;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
@@ -12,12 +13,9 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import services.RaceService;
 import services.UserService;
 
-import java.sql.Timestamp;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 
 public class MyBot extends TelegramLongPollingBot {
@@ -26,175 +24,108 @@ public class MyBot extends TelegramLongPollingBot {
         super(options);
     }
 
-    private boolean scenario;
-    private boolean date = false;
-
     UserService userService = new UserService();
     RaceService raceService = new RaceService();
 
-    List<User> userList = userService.findAllUsers();
-    List<Race> racesList = raceService.findAllRaces();
+    private String alreadyRegistered = "Вы уже зарегестрированы";
+    private String notRegistered = "Вы не зарегестрированы";
+    private String setDate = "введите дату в формате dd/MM/yyyy";
+    private String registered = " вы зарегестрированы на гонку: ";
+    private String alreadyRegisteredDate = " вы уже зарегестрированы на эту дату";
 
-    Race getRace(String str){
-        Race race = null;
-        List<Race> racesList = raceService.findAllRaces();
-        for (Race r:racesList) {
-            SimpleDateFormat format = new SimpleDateFormat();
-            format.applyPattern("dd/MM/yyyy");
-            String date = format.format(r.getDate_of_race().getTime());
-            if(date.equals(str)){
-                race = r;
-            }
-        }
-        return race;
-    }
-
-    boolean isName(String name) {
-        boolean i = false;
-        for (User u:userList) {
-            i = u.getUser_name().equals(name);
-        }
-       return i;
-    }
 
     public void onUpdateReceived(Update update) {
 
 
         if (update.hasMessage() && update.getMessage().hasText()) {
-
-            if (update.getMessage().getText().equals("/admin")) {
-                try {
-                    //TODO ПРОСМОТР СОЗДАНЫХ ГОНОК, ПРОСМОТР УЧАСТНИКОВ НА КАЖДОЙ ГОНКЕ
-                    execute(sendAdminInlineKeyBoardMessage(update.getMessage().getChatId())
-                            .setText("Привет админ!"));
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
-
-            } else if (scenario) {
-                String date = update.getMessage().getText();
-
-                SimpleDateFormat format = new SimpleDateFormat();
-                format.applyPattern("dd/MM/yyyy");
-                    try {
-                        Date docDate = format.parse(date);
-                        System.out.println(docDate);
-                        scenario = false;
-                        Timestamp ts = new Timestamp(docDate.getTime());
-                        if (!scenario) {
-                            try {
-                                execute(new SendMessage()
-                                        .setChatId(update.getMessage().getChatId())
-                                        .setText("Вы выбрали дату " + date));
-
-                                Race race = new Race(ts);
-                                RaceService raceService = new RaceService();
-                                raceService.saveRace(race);
-
-                            } catch (TelegramApiException e) {
-                                e.printStackTrace();
-                            }
-                        }
-
-                    } catch (ParseException e) {
-                        try {
-                            execute(new SendMessage()
-                                    .setChatId(update.getMessage().getChatId())
-                                    .setText("Введите дату в формате: DD/MM/YYYY"));
-                        } catch (TelegramApiException ex) {
-                            e.printStackTrace();
-                        }
-                }
-            }
-            else {
-                try {
-                    execute(sendMainInlineKeyBoardMessage(update.getMessage().getChatId()));
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
+            switch (update.getMessage().getText()) {
+                case "/admin":
+                    sendAdminKeyBoard(update);
+                    break;
+                default:
+                    sendMainKeyboard(update);
             }
         } else if (update.hasCallbackQuery()) {
-            if (update.getCallbackQuery().getData().equals("reg"))
-                try {
-                    String userName = update.getCallbackQuery().getMessage().getChat().getUserName();
 
-                    if (!isName(userName)){
-                        User user = new User(userName);
-                        userService.saveUser(user);
-                        execute(sendREGInlineKeyBoardMessage(update.getCallbackQuery().getMessage().getChatId()));
+            switch (update.getCallbackQuery().getData()) {
+                case "reg":
+                    if (userService.getEntityByString(getUserName(update)) == null) {
+                        userService.saveUser(new User(getUserName(update)));
+                        sendRegistrationKeyboard(update, getUserName(update));
                     } else {
-                        try {
-                            execute(new SendMessage()
-                                    .setChatId(update.getCallbackQuery().getMessage().getChatId())
-                                    .setText("Вы уже зарегестрированы"));
-                        } catch (TelegramApiException e) {
-                            e.printStackTrace();
-                        }
+                        sendResponse(update, alreadyRegistered);
                     }
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
+                    break;
 
-            else if (update.getCallbackQuery().getData().equals("race")) {
-                try {
+                case "race":
+                    if (userService.getEntityByString(getUserName(update)) == null) {
+                        sendResponse(update, notRegistered);
+                    } else {
+                        sendChooseRaceKeyboard(update);
+                    }
+                    break;
 
-                    //TODO ПОЗДРАВЛЯЕМ, ВЫ ЗАРЕГЕСТРИРОВАНЫ НА ГОНКУ ТАКОГО-ТО ЧИСЛА
+                case "status":
+                    if (userService.getEntityByString(getUserName(update)) == null) {
+                        sendResponse(update, notRegistered);
+                    } else {
+                        List<Race> userRaces = userService.getEntityByString(getUserName(update)).getUserRaces();
+                        sendResponse(update,registered,getUserName(update),userRaces);
+                    }
+                    break;
 
-                    execute(sendChooseRaceInlineKeyBoardMessage(update.getCallbackQuery().getMessage().getChatId()));
-                    date = true;
+                case "create":
+                        sendResponse(update,setDate);
+                    break;
 
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
-            } else if (update.getCallbackQuery().getData().equals("status")) {
-                try {
-
-                    //TODO ВЫБОР ГОНКИ
-                    //TODO ВЫ ЗАРЕГЕСТРИРОВАНЫ НА ГОНКИ
-
-
-                    execute(new SendMessage().setText(
-                            update.getCallbackQuery().getData())
-                            .setChatId(update.getCallbackQuery().getMessage().getChatId()));
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
-            } else if (update.getCallbackQuery().getData().equals("create")) {
-                try {
-                    execute(new SendMessage()
-                            .setChatId(update.getCallbackQuery().getMessage().getChatId()).setText("Введите дату в формате: DD/MM/YYYY"));
-                    scenario = true;
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
-
+                default:
+                    dateChecker(update.getCallbackQuery().getData(),
+                            getUserName(update),
+                            update);
+                    break;
             }
-            else if (date) {
-                String date = update.getCallbackQuery().getData();
-                String userName = update.getCallbackQuery().getMessage().getChat().getUserName();
+        }
+    }
 
-                for (User u:userList) {
+    String getUserName(Update update){
+        return update.getCallbackQuery().getMessage().getChat().getUserName();
+    }
 
-                    if(u.getUser_name().equals(userName)){
-                            //TODO
-                         u.addRaceToUser(getRace(date));
-                        System.out.println(date);
-                    };
+    public void dateChecker(String data, String userName, Update update) {
+        List<Race> races = raceService.findAllRaces();
+        User user = userService.getEntityByString(userName);
+        List<Race> userRaces = user.getUserRaces();
+        for (Race r : races) {
+            if (!userRaces.contains(r)) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/YYYY");
+                String sf = formatter.format(r.getDateOfRace());
+                if (sf.equals(data)) {
+
+                    user.addRaceToUser(r);
+                    userService.updateUser(user);
+                    try {
+                        execute(new SendMessage()
+                                .setChatId(update.getCallbackQuery().getMessage().getChatId())
+                                .setText(userName + " вы зарегестрированы на гонку: " + data));
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                    }
                 }
-
+            } else {
+                sendResponse(update,alreadyRegisteredDate,userName);
 //                try {
-//                    //TODO@!!!!
 //                    execute(new SendMessage()
-//                            .setChatId(update.getCallbackQuery().getMessage().getChatId()).setText("//TODO"));
-//                    //TODO@!!!!
+//                            .setChatId(setChatId)
+//                            .setText(userName + " вы уже зарегестрированы на эту дату"));
 //                } catch (TelegramApiException e) {
 //                    e.printStackTrace();
 //                }
             }
         }
+
     }
 
-    private static InlineKeyboardButton raceButton() {
+    private InlineKeyboardButton raceButton() {
         final String RACE = "race";
         InlineKeyboardButton button = new InlineKeyboardButtonBuilder()
                 .setText("Хочу гонять!")
@@ -202,8 +133,7 @@ public class MyBot extends TelegramLongPollingBot {
                 .build();
         return button;
     }
-
-    private static InlineKeyboardButton regButton() {
+    private InlineKeyboardButton regButton() {
         final String REG = "reg";
         InlineKeyboardButton button = new InlineKeyboardButtonBuilder()
                 .setText("Зарегестрироваться")
@@ -211,8 +141,7 @@ public class MyBot extends TelegramLongPollingBot {
                 .build();
         return button;
     }
-
-    private static InlineKeyboardButton statusButton() {
+    private InlineKeyboardButton statusButton() {
         final String STATUS = "status";
         InlineKeyboardButton button = new InlineKeyboardButtonBuilder()
                 .setText("Мой статус")
@@ -220,8 +149,7 @@ public class MyBot extends TelegramLongPollingBot {
                 .build();
         return button;
     }
-
-    private static InlineKeyboardButton createRace() {
+    private InlineKeyboardButton createRace() {
         final String CREATE = "create";
         InlineKeyboardButton button = new InlineKeyboardButtonBuilder()
                 .setText("Создать событие")
@@ -229,29 +157,23 @@ public class MyBot extends TelegramLongPollingBot {
                 .build();
         return button;
     }
+    private List<InlineKeyboardButton> chooseRace() {
 
-    private static List<InlineKeyboardButton>  chooseRace() {
-        RaceService raceService = new RaceService();
-        List<Race> raceList = raceService.findAllRaces();
-
-        InlineKeyboardButton button = null;
-        List <InlineKeyboardButton> list = new ArrayList<>();
-        for (Race r:raceList) {
-            SimpleDateFormat format = new SimpleDateFormat();
-            format.applyPattern("dd/MM/yyyy");
-            String date = format.format(r.getDate_of_race().getTime());
-             button = new InlineKeyboardButtonBuilder()
+        InlineKeyboardButton button;
+        List<InlineKeyboardButton> list = new ArrayList<>();
+        for (Race r : raceService.findAllRaces()) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/YYYY");
+            String date = formatter.format(r.getDateOfRace());
+            button = new InlineKeyboardButtonBuilder()
                     .setText(date)
                     .setCallbackData(date)
                     .build();
-
-             list.add(button);
+            list.add(button);
         }
         return list;
     }
 
-
-    public SendMessage sendMainInlineKeyBoardMessage(long chatId) {
+    public SendMessage mainInlineKeyBoardMessage(long chatId) {
         final InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
         keyboard.add(Arrays.asList(raceButton(), regButton(), statusButton()));
@@ -260,18 +182,16 @@ public class MyBot extends TelegramLongPollingBot {
                 .setText("Привет, выбери один из пунктов меню!")
                 .setReplyMarkup(inlineKeyboardMarkup);
     }
-
-    public static SendMessage sendREGInlineKeyBoardMessage(long chatId) {
+    public SendMessage regInlineKeyBoardMessage(long chatId) {
         final InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
         keyboard.add(Arrays.asList(raceButton(), statusButton()));
         inlineKeyboardMarkup.setKeyboard(keyboard);
         return new SendMessage().setChatId(chatId)
-                .setText("Поздравляем! Теперь можешь выбрать удобное время для гонки и получить инфо о своем статусе")
+                .setText("теперь можешь выбрать удобное время для гонки и получить инфо о своем статусе")
                 .setReplyMarkup(inlineKeyboardMarkup);
     }
-
-    public static SendMessage sendChooseRaceInlineKeyBoardMessage(long chatId) {
+    public SendMessage chooseRaceInlineKeyBoardMessage(long chatId) {
         final InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
         keyboard.add(chooseRace());
@@ -280,8 +200,7 @@ public class MyBot extends TelegramLongPollingBot {
                 .setText("Выбери одну из возможных дат: ")
                 .setReplyMarkup(inlineKeyboardMarkup);
     }
-
-    public static SendMessage sendAdminInlineKeyBoardMessage(long chatId) {
+    public SendMessage adminInlineKeyBoardMessage(long chatId) {
         final InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
         keyboard.add(Arrays.asList(createRace()));
@@ -290,11 +209,58 @@ public class MyBot extends TelegramLongPollingBot {
                 .setReplyMarkup(inlineKeyboardMarkup);
     }
 
+    @SneakyThrows
+    private void sendAdminKeyBoard(Update update) {
+        //TODO ПРОСМОТР СОЗДАНЫХ ГОНОК, ПРОСМОТР УЧАСТНИКОВ НА КАЖДОЙ ГОНКЕ
+        execute(adminInlineKeyBoardMessage(update.getMessage().getChatId()).setText("Привет админ!"));
+    }
+    @SneakyThrows
+    private void sendMainKeyboard(Update update) {
+        execute(mainInlineKeyBoardMessage(update.getMessage().getChatId()));
+    }
+    @SneakyThrows
+    private void sendRegistrationKeyboard(Update update, String userName) {
+        execute(new SendMessage()
+                .setChatId(update.getCallbackQuery().getMessage().getChatId())
+                .setText(userName + ", поздравляем ты зарегестрирован!"));
+        execute(regInlineKeyBoardMessage(update.getCallbackQuery().getMessage().getChatId()));
+    }
+    @SneakyThrows
+    private void sendChooseRaceKeyboard(Update update) {
+        execute(chooseRaceInlineKeyBoardMessage(update.getCallbackQuery().getMessage().getChatId()));
+    }
+
+    @SneakyThrows
+    private void sendResponse(Update update, String setText) {
+        execute(new SendMessage()
+                .setChatId(update.getCallbackQuery().getMessage().getChatId())
+                .setText(setText));
+
+    }
+    @SneakyThrows
+    private void sendResponse(Update update, String setText, String userName) {
+        execute(new SendMessage()
+                .setChatId(update.getCallbackQuery().getMessage().getChatId())
+                .setText(userName + setText));
+
+    }
+    @SneakyThrows
+    private void sendResponse(Update update, String setText, String userName, List<Race> userRaces) {
+        execute(new SendMessage()
+                .setChatId(update.getCallbackQuery().getMessage().getChatId())
+                .setText(userName + setText + userRaces.toString()));
+
+    }
+
+    @Override
     public String getBotUsername() {
         return "tets88_bot";
     }
-
+    @Override
     public String getBotToken() {
         return "1036923097:AAEK_tX1pC6vvbMOm9wsC-6QWo3v9oHFA7c";
     }
+
 }
+
+

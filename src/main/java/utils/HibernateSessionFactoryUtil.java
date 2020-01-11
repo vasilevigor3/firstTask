@@ -3,29 +3,26 @@ package utils;
 import models.Race;
 import models.User;
 import org.hibernate.SessionFactory;
-import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 
 public class HibernateSessionFactoryUtil {
-    private static SessionFactory sessionFactory;
 
-    private HibernateSessionFactoryUtil() {
+    private static final SessionFactory sessionFactory;
+
+    static {
+        try {
+            sessionFactory = new Configuration().configure()
+                    .addAnnotatedClass(User.class)
+                    .addAnnotatedClass(Race.class)
+                    .buildSessionFactory();
+
+        } catch (Throwable ex) {
+            System.err.println("Initial SessionFactory creation failed." + ex);
+            throw new ExceptionInInitializerError(ex);
+        }
     }
 
-    public static SessionFactory getSessionFactory(){
-        if(sessionFactory == null) {
-            try {
-                Configuration configuration = new Configuration().configure();
-                configuration.addAnnotatedClass(User.class);
-                configuration.addAnnotatedClass(Race.class);
-                StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder()
-                        .applySettings(configuration.getProperties());
-                sessionFactory = configuration.buildSessionFactory(builder.build());
-                }
-            catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+    public static SessionFactory getSessionFactory() {
         return sessionFactory;
     }
 }

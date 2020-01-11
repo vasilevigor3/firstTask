@@ -2,13 +2,14 @@ package services;
 
 import dao.DAO;
 import dao.UserDAOImpl;
+import models.Race;
 import models.User;
 
 import java.util.List;
 
 public class UserService {
 
-    private DAO <User> userDAOImpl = new UserDAOImpl();
+    private DAO<User, Race> userDAOImpl = new UserDAOImpl();
 
     public UserService() {
     }
@@ -17,7 +18,9 @@ public class UserService {
         return userDAOImpl.findById(id);
     }
 
-//    public User finByUniqueField(String user_name) { return userDAOImpl.finByUniqueField(user_name); }
+    public User getEntityByString(String userName) {
+        return userDAOImpl.getEntityByString(userName);
+    }
 
     public void saveUser(User user) {
         userDAOImpl.save(user);
@@ -25,6 +28,10 @@ public class UserService {
 
     public void deleteUser(User user) {
         userDAOImpl.delete(user);
+    }
+
+    public void updateUser(User user, Race race) {
+        userDAOImpl.update(user, race);
     }
 
     public void updateUser(User user) {

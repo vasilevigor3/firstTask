@@ -3,7 +3,7 @@ package dao;
 
 import java.util.List;
 
-public interface DAO<T> {
+public interface DAO<T,P> {
 
     T findById(int id);
 
@@ -11,7 +11,13 @@ public interface DAO<T> {
 
     void save(T t);
 
-    void update(T t/*, String[]params*/);
+    void update(T t);
+
+    void update(T user, P race);
 
     void delete(T t);
+
+    T getEntityByString(String s);
+
+
 }

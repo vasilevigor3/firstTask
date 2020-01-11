@@ -3,12 +3,14 @@ package services;
 import dao.DAO;
 import dao.RaceDAOImpl;
 import models.Race;
+import models.User;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public class RaceService {
 
-    private DAO <Race> raceDAOImpl = new RaceDAOImpl();
+    private DAO <Race, User> raceDAOImpl = new RaceDAOImpl();
 
     public RaceService() {
     }
@@ -32,4 +34,6 @@ public class RaceService {
     public List<Race> findAllRaces() {
         return raceDAOImpl.getAll();
     }
+
+    public Race getEntityByString(String s) {return raceDAOImpl.getEntityByString(s);}
 }

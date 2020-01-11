@@ -7,6 +7,7 @@ public class InlineKeyboardButtonBuilder {
 
     public InlineKeyboardButtonBuilder() {
         this.button = new InlineKeyboardButton();
+
     }
 
     public InlineKeyboardButtonBuilder setText(String text){
