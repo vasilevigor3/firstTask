@@ -113,13 +113,6 @@ public class MyBot extends TelegramLongPollingBot {
                 }
             } else {
                 sendResponse(update,alreadyRegisteredDate,userName);
-//                try {
-//                    execute(new SendMessage()
-//                            .setChatId(setChatId)
-//                            .setText(userName + " вы уже зарегестрированы на эту дату"));
-//                } catch (TelegramApiException e) {
-//                    e.printStackTrace();
-//                }
             }
         }
 
