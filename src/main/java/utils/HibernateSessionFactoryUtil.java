@@ -1,5 +1,6 @@
 package utils;
 
+import models.BotUser;
 import models.Race;
 import models.User;
 import org.hibernate.SessionFactory;
@@ -14,6 +15,7 @@ public class HibernateSessionFactoryUtil {
             sessionFactory = new Configuration().configure()
                     .addAnnotatedClass(User.class)
                     .addAnnotatedClass(Race.class)
+                    .addAnnotatedClass(BotUser.class)
                     .buildSessionFactory();
 
         } catch (Throwable ex) {

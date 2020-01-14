@@ -31,8 +31,6 @@ public class RaceDAOImpl implements DAO <Race,User> {
         Session session = getSessionFactory().openSession();
         session.beginTransaction();
         List<Race> races = session.createQuery("From Race").list();
-//        List<Race> races = (List<Race>) getSessionFactory()
-//                .openSession().createQuery("From Race").list();
         session.getTransaction().commit();
         session.close();
         return races;
